@@ -45,48 +45,44 @@ const PaletteFragShader = `
   varying vec3 vWorldPos;
   varying vec3 vViewDir;
 
-  vec3 palette[6];
+  vec3 palette[7];
 
   void initPalette() {
-    palette[0] = vec3(0.96, 0.84, 0.78); // peach
-    palette[1] = vec3(0.91, 0.59, 0.42); // orange
-    palette[2] = vec3(0.83, 0.38, 0.17); // deep orange
-    palette[3] = vec3(0.91, 0.24, 0.55); // magenta
-    palette[4] = vec3(0.94, 0.88, 0.29); // yellow
-    palette[5] = vec3(0.50, 0.86, 0.79); // cyan
+    palette[0] = vec3(0.99, 0.95, 0.80); // warm cream
+    palette[1] = vec3(0.98, 0.86, 0.15); // sunflower yellow
+    palette[2] = vec3(0.96, 0.62, 0.12); // warm orange
+    palette[3] = vec3(0.90, 0.40, 0.28); // coral/salmon
+    palette[4] = vec3(0.55, 0.78, 0.18); // spring green
+    palette[5] = vec3(0.72, 0.86, 0.78); // soft mint
+    palette[6] = vec3(0.82, 0.72, 0.10); // deep golden
   }
 
   void main() {
     initPalette();
     vec3 n = normalize(vNormal);
 
-    // Fresnel for rim lighting
     float fresnel = pow(1.0 - abs(dot(n, vViewDir)), 2.0);
 
-    // Map normal direction to palette index using angular position
     float angle = atan(n.y, n.x) + time * 0.15 + colorShift;
-    float idx = mod(angle / 6.2832 * 6.0 + 6.0, 6.0);
+    float idx = mod(angle / 6.2832 * 7.0 + 7.0, 7.0);
     int i0 = int(floor(idx));
-    int i1 = int(mod(float(i0) + 1.0, 6.0));
-    float frac = fract(idx);
+    int i1 = int(mod(float(i0) + 1.0, 7.0));
+    float fr = fract(idx);
 
     vec3 c0 = palette[0];
     vec3 c1 = palette[0];
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
       if (i == i0) c0 = palette[i];
       if (i == i1) c1 = palette[i];
     }
-    vec3 baseColor = mix(c0, c1, smoothstep(0.3, 0.7, frac));
+    vec3 baseColor = mix(c0, c1, smoothstep(0.3, 0.7, fr));
 
-    // Add depth variation using z-normal
     float zInfluence = n.z * 0.5 + 0.5;
-    baseColor = mix(baseColor * 0.6, baseColor, zInfluence);
+    baseColor = mix(baseColor * 0.5, baseColor, zInfluence);
 
-    // Fresnel-driven color shift toward cyan/magenta at edges
     vec3 rimColor = mix(palette[3], palette[5], sin(time * 0.3 + vWorldPos.y) * 0.5 + 0.5);
-    baseColor = mix(baseColor, rimColor, fresnel * 0.6);
+    baseColor = mix(baseColor, rimColor, fresnel * 0.55);
 
-    // Light-like shading using dot with shifted light dir
     vec3 lightDir = normalize(vec3(sin(time * 0.2), cos(time * 0.15), 0.8));
     float diffuse = max(dot(n, lightDir), 0.0);
     baseColor *= 0.4 + diffuse * 0.6;
@@ -114,22 +110,23 @@ const PixelHalftoneShader = {
     uniform float pixelSize;
     varying vec2 vUv;
 
-    vec3 palette[7];
+    vec3 palette[8];
 
     void initPalette() {
-      palette[0] = vec3(0.96, 0.84, 0.78);
-      palette[1] = vec3(0.91, 0.59, 0.42);
-      palette[2] = vec3(0.83, 0.38, 0.17);
-      palette[3] = vec3(0.91, 0.24, 0.55);
-      palette[4] = vec3(0.94, 0.88, 0.29);
-      palette[5] = vec3(0.50, 0.86, 0.79);
-      palette[6] = vec3(0.0);
+      palette[0] = vec3(0.99, 0.95, 0.80); // warm cream
+      palette[1] = vec3(0.98, 0.86, 0.15); // sunflower yellow
+      palette[2] = vec3(0.96, 0.62, 0.12); // warm orange
+      palette[3] = vec3(0.90, 0.40, 0.28); // coral
+      palette[4] = vec3(0.55, 0.78, 0.18); // spring green
+      palette[5] = vec3(0.72, 0.86, 0.78); // soft mint
+      palette[6] = vec3(0.82, 0.72, 0.10); // deep golden
+      palette[7] = vec3(0.0);              // black
     }
 
     vec3 findClosest(vec3 color) {
       float minDist = 999.0;
       vec3 closest = vec3(0.0);
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 8; i++) {
         float d = distance(color, palette[i]);
         if (d < minDist) {
           minDist = d;
