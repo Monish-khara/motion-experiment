@@ -136,6 +136,10 @@ const PixelHalftoneShader = {
       return closest;
     }
 
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    }
+
     void main() {
       initPalette();
 
@@ -154,22 +158,30 @@ const PixelHalftoneShader = {
 
       vec3 quantized = findClosest(texColor.rgb);
 
-      // Gap between pixel blocks
-      float gap = 0.04;
-      if (withinPixel.x < gap || withinPixel.x > 1.0 - gap ||
-          withinPixel.y < gap || withinPixel.y > 1.0 - gap) {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-        return;
+      float isCircle = step(0.62, hash(blockIdx));
+      float distToCenter = length(withinPixel - 0.5);
+
+      if (isCircle > 0.5) {
+        // Solid colored circle on black
+        float radius = 0.15 + lum * 0.28;
+        float circle = smoothstep(radius + 0.02, radius - 0.02, distToCenter);
+        vec3 finalColor = quantized * circle;
+        gl_FragColor = vec4(finalColor, 1.0);
+      } else {
+        // Square cell with gap and squircle dot
+        float gap = 0.04;
+        if (withinPixel.x < gap || withinPixel.x > 1.0 - gap ||
+            withinPixel.y < gap || withinPixel.y > 1.0 - gap) {
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+          return;
+        }
+        vec2 d = abs(withinPixel - 0.5);
+        float squircle = pow(d.x, 2.8) + pow(d.y, 2.8);
+        float dotRadius = 0.06 + (1.0 - lum) * 0.22;
+        float dot = smoothstep(dotRadius + 0.012, dotRadius - 0.012, pow(squircle, 1.0 / 2.8));
+        vec3 finalColor = mix(quantized, quantized * 0.04, dot);
+        gl_FragColor = vec4(finalColor, 1.0);
       }
-
-      // Halftone dot — dark squircle on colored block
-      vec2 d = abs(withinPixel - 0.5);
-      float squircle = pow(d.x, 2.8) + pow(d.y, 2.8);
-      float dotRadius = 0.06 + (1.0 - lum) * 0.22;
-      float dot = smoothstep(dotRadius + 0.012, dotRadius - 0.012, pow(squircle, 1.0 / 2.8));
-      vec3 finalColor = mix(quantized, quantized * 0.04, dot);
-
-      gl_FragColor = vec4(finalColor, 1.0);
     }
   `
 };
